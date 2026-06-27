@@ -78,6 +78,77 @@ async function sendMessage(text) {
   });
 }
 
+async function warnBatchMisses() {
+  // Fetch all batch attempts (no orderBy to avoid composite index requirement)
+  const batchSnap = await db.collection("attempts")
+    .where("isBatch", "==", true)
+    .limit(2000)
+    .get();
+
+  if (batchSnap.empty) {
+    await sendMessage("⚠️ কোনো batch exam attempt পাওয়া যায়নি।");
+    return;
+  }
+
+  // Group attempts by examId
+  const examMap = new Map(); // examId -> { participants: Set<name>, latestTime: Date }
+
+  for (const d of batchSnap.docs) {
+    const f = d.data();
+    const examId = (f.examId || "").trim();
+    const name   = (f.guestName || "").trim();
+    if (!examId || !name) continue;
+
+    const submittedAt = f.submittedAt?.toDate?.() ?? new Date(0);
+
+    if (!examMap.has(examId)) {
+      examMap.set(examId, { participants: new Set(), latestTime: submittedAt });
+    }
+    const exam = examMap.get(examId);
+    exam.participants.add(name);
+    if (submittedAt > exam.latestTime) exam.latestTime = submittedAt;
+  }
+
+  // Sort exams newest-first, take last 3
+  const sortedExams = Array.from(examMap.entries())
+    .sort((a, b) => b[1].latestTime - a[1].latestTime);
+
+  if (sortedExams.length < 3) {
+    await sendMessage("⚠️ এখনো ৩টা batch exam সম্পন্ন হয়নি, miss check করা সম্ভব না।");
+    return;
+  }
+
+  const last3 = sortedExams.slice(0, 3);
+
+  // All students who ever took a batch exam
+  const allStudents = new Set(
+    sortedExams.flatMap(([, exam]) => [...exam.participants])
+  );
+
+  // Students who participated in at least one of the last 3 exams
+  const recent = new Set(
+    last3.flatMap(([, exam]) => [...exam.participants])
+  );
+
+  // Who missed ALL 3 recent exams (consecutive miss)
+  const missed = [...allStudents].filter(name => !recent.has(name)).sort();
+
+  if (missed.length === 0) {
+    await sendMessage("✅ সবাই গত ৩টা batch exam-এর অন্তত একটায় অংশ নিয়েছে।");
+    return;
+  }
+
+  let msg = `⚠️ <b>Batch Exam Miss Alert</b>\n`;
+  msg    += `━━━━━━━━━━━━━━━\n`;
+  msg    += `নিচের শিক্ষার্থীরা টানা <b>৩টা batch exam</b> miss করেছে:\n\n`;
+  missed.forEach((name, i) => { msg += `${i + 1}. ${name}\n`; });
+  msg    += `\n━━━━━━━━━━━━━━━\n`;
+  msg    += `📌 নিয়মিত পরীক্ষায় অংশ নাও — exammatebd.com`;
+
+  await sendMessage(msg);
+  console.log(`Warned ${missed.length} students for missing 3 consecutive batch exams.`);
+}
+
 async function main() {
   const performers = await fetchTodayPerformers();
   const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
@@ -108,4 +179,9 @@ async function main() {
   console.log("Leaderboard sent successfully!");
 }
 
-main().catch(console.error);
+const mode = process.argv[2];
+if (mode === "--warn-misses") {
+  warnBatchMisses().catch(console.error);
+} else {
+  main().catch(console.error);
+}
