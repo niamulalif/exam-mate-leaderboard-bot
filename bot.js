@@ -90,6 +90,33 @@ async function sendMessage(text) {
   });
 }
 
+async function batchStats() {
+  const batchSnap = await db.collection("attempts")
+    .where("isBatch", "==", true)
+    .limit(2000)
+    .get();
+
+  const students = new Set();
+  const examIds  = new Set();
+
+  for (const d of batchSnap.docs) {
+    const f    = d.data();
+    const name = (f.guestName || "").trim();
+    const eid  = (f.examId   || "").trim();
+    if (name) students.add(name);
+    if (eid)  examIds.add(eid);
+  }
+
+  let msg = `📊 <b>Batch Exam Stats</b>\n`;
+  msg    += `━━━━━━━━━━━━━━━\n`;
+  msg    += `👥 মোট শিক্ষার্থী: <b>${students.size} জন</b>\n`;
+  msg    += `📝 মোট batch exam: <b>${examIds.size}টি</b>\n`;
+  msg    += `📋 মোট attempt: <b>${batchSnap.size}টি</b>`;
+
+  await sendMessage(msg);
+  console.log(`Batch stats: ${students.size} students, ${examIds.size} exams, ${batchSnap.size} attempts`);
+}
+
 async function warnBatchMisses() {
   // Fetch all batch attempts (no orderBy to avoid composite index requirement)
   const batchSnap = await db.collection("attempts")
@@ -195,6 +222,8 @@ async function main() {
 const mode = process.argv[2];
 if (mode === "--warn-misses") {
   warnBatchMisses().catch(console.error);
+} else if (mode === "--batch-stats") {
+  batchStats().catch(console.error);
 } else {
   main().catch(console.error);
 }
