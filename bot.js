@@ -3,7 +3,19 @@ const fetch = require("node-fetch");
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID   = process.env.CHAT_ID;
-const SA        = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+if (!BOT_TOKEN || !CHAT_ID || !process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.error("❌ Missing required env vars: BOT_TOKEN, CHAT_ID, or FIREBASE_SERVICE_ACCOUNT");
+  process.exit(1);
+}
+
+let SA;
+try {
+  SA = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} catch (e) {
+  console.error("❌ FIREBASE_SERVICE_ACCOUNT is not valid JSON:", e.message);
+  process.exit(1);
+}
 
 if (!admin.apps.length) {
   admin.initializeApp({ credential: admin.credential.cert(SA) });
@@ -113,12 +125,13 @@ async function warnBatchMisses() {
   const sortedExams = Array.from(examMap.entries())
     .sort((a, b) => b[1].latestTime - a[1].latestTime);
 
-  if (sortedExams.length < 3) {
-    await sendMessage("⚠️ এখনো ৩টা batch exam সম্পন্ন হয়নি, miss check করা সম্ভব না।");
+  if (sortedExams.length === 0) {
+    console.log("No batch exams found in attempts.");
     return;
   }
 
-  const last3 = sortedExams.slice(0, 3);
+  const checkCount = Math.min(3, sortedExams.length);
+  const last3      = sortedExams.slice(0, checkCount);
 
   // All students who ever took a batch exam
   const allStudents = new Set(
@@ -134,19 +147,19 @@ async function warnBatchMisses() {
   const missed = [...allStudents].filter(name => !recent.has(name)).sort();
 
   if (missed.length === 0) {
-    await sendMessage("✅ সবাই গত ৩টা batch exam-এর অন্তত একটায় অংশ নিয়েছে।");
+    await sendMessage(`✅ সবাই গত ${checkCount}টা batch exam-এর অন্তত একটায় অংশ নিয়েছে।`);
     return;
   }
 
   let msg = `⚠️ <b>Batch Exam Miss Alert</b>\n`;
   msg    += `━━━━━━━━━━━━━━━\n`;
-  msg    += `নিচের শিক্ষার্থীরা টানা <b>৩টা batch exam</b> miss করেছে:\n\n`;
+  msg    += `নিচের শিক্ষার্থীরা টানা <b>${checkCount}টা batch exam</b> miss করেছে:\n\n`;
   missed.forEach((name, i) => { msg += `${i + 1}. ${name}\n`; });
   msg    += `\n━━━━━━━━━━━━━━━\n`;
   msg    += `📌 নিয়মিত পরীক্ষায় অংশ নাও — exammatebd.com`;
 
   await sendMessage(msg);
-  console.log(`Warned ${missed.length} students for missing 3 consecutive batch exams.`);
+  console.log(`Warned ${missed.length} students for missing ${checkCount} consecutive batch exams.`);
 }
 
 async function main() {
