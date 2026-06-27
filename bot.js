@@ -67,7 +67,7 @@ async function fetchTodayPerformers() {
 
   return Array.from(map.values())
     .sort((a, b) => b.totalXP - a.totalXP)
-    .slice(0, 10);
+    .slice(0, 25);
 }
 
 async function sendMessage(text) {
@@ -80,7 +80,9 @@ async function sendMessage(text) {
 
 async function main() {
   const performers = await fetchTodayPerformers();
-  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
+    "1️⃣1️⃣","1️⃣2️⃣","1️⃣3️⃣","1️⃣4️⃣","1️⃣5️⃣","1️⃣6️⃣","1️⃣7️⃣","1️⃣8️⃣","1️⃣9️⃣","2️⃣0️⃣",
+    "2️⃣1️⃣","2️⃣2️⃣","2️⃣3️⃣","2️⃣4️⃣","2️⃣5️⃣"];
   const today  = new Date().toLocaleDateString("bn-BD", { timeZone: "Asia/Dhaka", day: "numeric", month: "long" });
 
   if (performers.length === 0) {
