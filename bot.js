@@ -45,24 +45,15 @@ async function fetchTodayPerformers() {
   const map = new Map();
 
   for (const d of attSnap.docs) {
-    const f  = d.data();
-    const xp = (f.xpEarned) ?? 0;
-
-    if (f.isGuest) {
-      const name = ((f.guestName) ?? "").trim();
-      if (!name) continue;
-      const key = `guest:${name.toLowerCase()}`;
-      if (map.has(key)) { map.get(key).totalXP += xp; map.get(key).exams += 1; }
-      else map.set(key, { name, college: (f.collegeName ?? "").trim(), totalXP: xp, exams: 1 });
-    } else {
-      const uid  = (f.userId) || "";
-      if (!uid || uid === "guest") continue;
-      const user = userMeta.get(uid);
-      if (!user) continue;
-      const key  = `user:${uid}`;
-      if (map.has(key)) { map.get(key).totalXP += xp; map.get(key).exams += 1; }
-      else map.set(key, { name: user.name, college: user.college, totalXP: xp, exams: 1 });
-    }
+    const f   = d.data();
+    const xp  = (f.xpEarned) ?? 0;
+    const uid = (f.userId) || "";
+    if (!uid || uid === "guest" || uid === "batch") continue;
+    const user = userMeta.get(uid);
+    if (!user) continue;
+    const key = `user:${uid}`;
+    if (map.has(key)) { map.get(key).totalXP += xp; map.get(key).exams += 1; }
+    else map.set(key, { name: user.name, college: user.college, totalXP: xp, exams: 1 });
   }
 
   for (const d of userSnap.docs) {
