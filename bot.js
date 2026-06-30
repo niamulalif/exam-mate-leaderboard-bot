@@ -196,7 +196,10 @@ async function warnExamDropouts() {
   const examMap = new Map(); // examId -> { participants: Set<name>, latestTime: Date }
 
   for (const d of batchSnap.docs) {
-    const f = d.data();
+    const f   = d.data();
+    const uid = (f.userId || "").trim();
+    if (!uid || uid === "batch") continue; // skip guests, only logged-in students
+
     const examId = (f.examId || "").trim();
     const name   = (f.guestName || "").trim();
     if (!examId || !name) continue;
