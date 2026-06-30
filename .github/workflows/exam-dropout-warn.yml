@@ -1,4 +1,4 @@
-name: Batch Miss Warning
+name: Exam Dropout Warning
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: node bot.js --warn-misses
+      - run: node bot.js --warn-dropouts
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
