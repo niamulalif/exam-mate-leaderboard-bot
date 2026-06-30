@@ -180,6 +180,70 @@ async function warnBatchMisses() {
   console.log(`Warned ${missed.length} students for missing ${checkCount} consecutive batch exams.`);
 }
 
+async function warnExamDropouts() {
+  // Fetch all batch attempts (no orderBy to avoid composite index requirement)
+  const batchSnap = await db.collection("attempts")
+    .where("isBatch", "==", true)
+    .limit(2000)
+    .get();
+
+  if (batchSnap.empty) {
+    await sendMessage("⚠️ কোনো batch exam attempt পাওয়া যায়নি।");
+    return;
+  }
+
+  // Group attempts by examId
+  const examMap = new Map(); // examId -> { participants: Set<name>, latestTime: Date }
+
+  for (const d of batchSnap.docs) {
+    const f = d.data();
+    const examId = (f.examId || "").trim();
+    const name   = (f.guestName || "").trim();
+    if (!examId || !name) continue;
+
+    const submittedAt = f.submittedAt?.toDate?.() ?? new Date(0);
+
+    if (!examMap.has(examId)) {
+      examMap.set(examId, { participants: new Set(), latestTime: submittedAt });
+    }
+    const exam = examMap.get(examId);
+    exam.participants.add(name);
+    if (submittedAt > exam.latestTime) exam.latestTime = submittedAt;
+  }
+
+  // Sort exams newest-first
+  const sortedExams = Array.from(examMap.entries())
+    .sort((a, b) => b[1].latestTime - a[1].latestTime);
+
+  if (sortedExams.length < 2) {
+    console.log("Need at least 2 batch exams to check for dropouts.");
+    return;
+  }
+
+  const [, latestExam]   = sortedExams[0];
+  const [, previousExam] = sortedExams[1];
+
+  // Took the previous exam but skipped the latest one
+  const dropped = [...previousExam.participants]
+    .filter(name => !latestExam.participants.has(name))
+    .sort();
+
+  if (dropped.length === 0) {
+    await sendMessage("✅ আগের exam-এ অংশ নেওয়া সবাই সর্বশেষ exam-এও অংশ নিয়েছে।");
+    return;
+  }
+
+  let msg = `⚠️ <b>Exam Dropout Alert</b>\n`;
+  msg    += `━━━━━━━━━━━━━━━\n`;
+  msg    += `আগের batch exam দিয়েছিল কিন্তু সর্বশেষটায় দেয়নি:\n\n`;
+  dropped.forEach((name, i) => { msg += `${i + 1}. ${name}\n`; });
+  msg    += `\n━━━━━━━━━━━━━━━\n`;
+  msg    += `📌 পরের পরীক্ষা miss করো না — exammatebd.com`;
+
+  await sendMessage(msg);
+  console.log(`Warned ${dropped.length} students for dropping after previous exam.`);
+}
+
 async function main() {
   const performers = await fetchTodayPerformers();
   const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
@@ -213,6 +277,8 @@ async function main() {
 const mode = process.argv[2];
 if (mode === "--warn-misses") {
   warnBatchMisses().catch(console.error);
+} else if (mode === "--warn-dropouts") {
+  warnExamDropouts().catch(console.error);
 } else if (mode === "--batch-stats") {
   batchStats().catch(console.error);
 } else {
