@@ -70,14 +70,16 @@ async function fetchTodayPerformers() {
 
   return Array.from(map.values())
     .sort((a, b) => b.totalXP - a.totalXP)
-    .slice(0, 25);
+    .slice(0, 50);
 }
 
-async function sendMessage(text) {
+const CHANNEL_ID = "-1001729781577"; // @ConfusingQuestions5
+
+async function sendMessage(text, chatId = CHAT_ID) {
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: "HTML" }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
   });
 }
 
@@ -251,7 +253,9 @@ async function main() {
   const performers = await fetchTodayPerformers();
   const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
     "1️⃣1️⃣","1️⃣2️⃣","1️⃣3️⃣","1️⃣4️⃣","1️⃣5️⃣","1️⃣6️⃣","1️⃣7️⃣","1️⃣8️⃣","1️⃣9️⃣","2️⃣0️⃣",
-    "2️⃣1️⃣","2️⃣2️⃣","2️⃣3️⃣","2️⃣4️⃣","2️⃣5️⃣"];
+    "2️⃣1️⃣","2️⃣2️⃣","2️⃣3️⃣","2️⃣4️⃣","2️⃣5️⃣","2️⃣6️⃣","2️⃣7️⃣","2️⃣8️⃣","2️⃣9️⃣","3️⃣0️⃣",
+    "3️⃣1️⃣","3️⃣2️⃣","3️⃣3️⃣","3️⃣4️⃣","3️⃣5️⃣","3️⃣6️⃣","3️⃣7️⃣","3️⃣8️⃣","3️⃣9️⃣","4️⃣0️⃣",
+    "4️⃣1️⃣","4️⃣2️⃣","4️⃣3️⃣","4️⃣4️⃣","4️⃣5️⃣","4️⃣6️⃣","4️⃣7️⃣","4️⃣8️⃣","4️⃣9️⃣","5️⃣0️⃣"];
   const today  = new Date().toLocaleDateString("bn-BD", { timeZone: "Asia/Dhaka", day: "numeric", month: "long" });
 
   if (performers.length === 0) {
@@ -274,6 +278,7 @@ async function main() {
   msg += `👉 exammatebd.com`;
 
   await sendMessage(msg);
+  await sendMessage(msg, CHANNEL_ID);
   console.log("Leaderboard sent successfully!");
 }
 
