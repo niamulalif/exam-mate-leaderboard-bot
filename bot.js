@@ -30,9 +30,9 @@ async function fetchTodayPerformers() {
     db.collection("attempts")
       .where("submittedAt", ">=", todayStart)
       .orderBy("submittedAt", "desc")
-      .limit(500)
+      .limit(2000)
       .get(),
-    db.collection("users").limit(1000).get(),
+    db.collection("users").limit(5000).get(),
   ]);
 
   const userMeta = new Map();
