@@ -45,15 +45,17 @@ async function fetchTodayPerformers() {
   const map = new Map();
 
   for (const d of attSnap.docs) {
-    const f   = d.data();
-    const xp  = (f.xpEarned) ?? 0;
-    const uid = (f.userId) || "";
+    const f       = d.data();
+    const xp      = (f.xpEarned) ?? 0;
+    const uid     = (f.userId) || "";
     if (!uid || uid === "guest" || uid === "batch") continue;
-    const user = userMeta.get(uid);
-    if (!user) continue;
+    const user    = userMeta.get(uid);
+    const name    = user?.name    || (f.guestName    || "").trim();
+    const college = user?.college || (f.collegeName  || "").trim();
+    if (!name) continue;
     const key = `user:${uid}`;
     if (map.has(key)) { map.get(key).totalXP += xp; map.get(key).exams += 1; }
-    else map.set(key, { name: user.name, college: user.college, totalXP: xp, exams: 1 });
+    else map.set(key, { name, college, totalXP: xp, exams: 1 });
   }
 
   for (const d of userSnap.docs) {
