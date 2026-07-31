@@ -59,15 +59,17 @@ async function fetchTodayPerformers() {
   }
 
   for (const d of userSnap.docs) {
-    const f         = d.data();
-    const dailyXP   = f.dailyXP;
+    const f          = d.data();
+    const dailyXP    = f.dailyXP;
     const practiceXP = dailyXP ? (Number(dailyXP[todayKey]) || 0) : 0;
     if (practiceXP === 0) continue;
-    const user = userMeta.get(d.id);
-    if (!user) continue;
+    const user    = userMeta.get(d.id);
+    const name    = user?.name    || (f.displayName || (f.email ?? "").split("@")[0] || "").trim();
+    const college = user?.college || (f.college ?? "").trim();
+    if (!name) continue;
     const key = `user:${d.id}`;
     if (map.has(key)) { map.get(key).totalXP += practiceXP; }
-    else map.set(key, { name: user.name, college: user.college, totalXP: practiceXP, exams: 0 });
+    else map.set(key, { name, college, totalXP: practiceXP, exams: 0 });
   }
 
   return Array.from(map.values())
