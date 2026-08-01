@@ -274,7 +274,6 @@ async function main() {
   for (let i = 0; i < performers.length; i++) {
     const p = performers[i];
     msg += `${medals[i]} <b>${p.name}</b> — ${p.totalXP} XP\n`;
-    if (p.college) msg += `    🏫 ${p.college}\n`;
   }
 
   msg += `\n━━━━━━━━━━━━━━━\n`;
